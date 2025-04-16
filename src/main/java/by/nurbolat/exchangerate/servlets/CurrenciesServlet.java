@@ -51,6 +51,7 @@ public class CurrenciesServlet extends HttpServlet {
             String result = new Gson().toJson(e.toString());
             pw.println(result);
             pw.flush();
+            throw new RuntimeException(e);
         }
     }
 

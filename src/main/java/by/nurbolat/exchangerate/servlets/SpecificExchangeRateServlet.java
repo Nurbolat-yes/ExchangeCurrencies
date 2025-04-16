@@ -1,7 +1,7 @@
 package by.nurbolat.exchangerate.servlets;
 
-import by.nurbolat.exchangerate.dao.CurrenciesDao;
-import by.nurbolat.exchangerate.entity.Currencies;
+import by.nurbolat.exchangerate.dao.ExchangeRatesDao;
+import by.nurbolat.exchangerate.entity.ExchangeRates;
 import by.nurbolat.exchangerate.exceptions.DatabaseAccessException;
 import by.nurbolat.exchangerate.utils.ErrorResponse;
 import com.google.gson.Gson;
@@ -14,18 +14,18 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.PrintWriter;
 
-@WebServlet("/specificCurrency/*")
-public class SpecificCurrencyServlet extends HttpServlet {
+@WebServlet("/specificExchangeRate/*")
+public class SpecificExchangeRateServlet extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-        CurrenciesDao currenciesDao = CurrenciesDao.getInstance();
+        ExchangeRatesDao exchangeRatesDao = ExchangeRatesDao.getInstance();
         PrintWriter pw = response.getWriter();
 
         String url = String.valueOf(request.getRequestURL());
         String[] splittedUrl = url.split("/");
-        String code = splittedUrl[splittedUrl.length - 1];
+        String pairOfCodes = splittedUrl[splittedUrl.length - 1];
 
-        if (code.length() != 3){
+        if (pairOfCodes.length() != 6){
             response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
             ErrorResponse message = new ErrorResponse("wrong format of Code Currency");
             String result = new Gson().toJson(message.toString());
@@ -34,9 +34,9 @@ public class SpecificCurrencyServlet extends HttpServlet {
             return;
         }
 
-        Currencies currency = null;
+        ExchangeRates exchangeRates = null;
         try {
-            currency = currenciesDao.findByCode(code);
+            exchangeRates = exchangeRatesDao.findByCode(pairOfCodes);
         } catch (DatabaseAccessException e) {
             response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
 
@@ -45,16 +45,16 @@ public class SpecificCurrencyServlet extends HttpServlet {
             pw.flush();
         }
 
-        if (currency.getId() == 0){
+        if (exchangeRates.getId() == 0){
             response.setStatus(HttpServletResponse.SC_NOT_FOUND);
-            ErrorResponse message = new ErrorResponse("Currency not found");
+            ErrorResponse message = new ErrorResponse("Pair of Exchange Currency not found");
             String result = new Gson().toJson(message);
             pw.println(result);
             pw.flush();
             return;
         }
 
-        String json = new Gson().toJson(currency);
+        String json = new Gson().toJson(exchangeRates);
         pw.println(json);
         pw.flush();
     }
