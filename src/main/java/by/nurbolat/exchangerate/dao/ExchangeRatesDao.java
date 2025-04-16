@@ -3,8 +3,11 @@ package by.nurbolat.exchangerate.dao;
 import by.nurbolat.exchangerate.entity.Currencies;
 import by.nurbolat.exchangerate.entity.ExchangeRates;
 import by.nurbolat.exchangerate.exceptions.DatabaseAccessException;
+import by.nurbolat.exchangerate.exceptions.DuplicateKeyValueExceptions;
 import by.nurbolat.exchangerate.utils.ConnectionManager;
 
+import java.math.BigDecimal;
+import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -19,18 +22,74 @@ public class ExchangeRatesDao implements Dao<ExchangeRates>{
             SELECT id, basecurrencyid, targetcurrencyid, rate FROM exchangerates
             """;
 
-    private final static String FIND_EXCHANGERATE_BY_PAIR_OF_IDS =
+    private final static String FIND_EXCHANGE_CURRENCY_BY_PAIR_OF_IDS_SQL =
             FIND_ALL_SQL + " WHERE basecurrencyid = ? and targetcurrencyid = ?";
 
-    private final static String FIND_ID_BY_CODE = """
+    private final static String FIND_ID_BY_CODE_SQL = """
             SELECT id FROM currencies c
             WHERE c.code = ?
             """;
 
+    private final static String SAVE_EXCHANGE_CURRENCY_SQL = """
+            INSERT INTO exchangerates(basecurrencyid, targetcurrencyid, rate)
+            VALUES (?,?,?)  
+            """;
+
+    private final static String UPDATE_EXCHANGE_RATE_SQL = """
+            UPDATE exchangerates SET rate = ? WHERE basecurrencyid = ? AND targetcurrencyid = ?
+            """;
+
+    public ExchangeRates updateRate(ExchangeRates exchangeRates) throws DatabaseAccessException {
+        ExchangeRates exchangeRate = new ExchangeRates();
+        try(var connection = ConnectionManager.get();
+            var statement = connection.prepareStatement(UPDATE_EXCHANGE_RATE_SQL)) {
+
+            statement.setBigDecimal(1,exchangeRates.getRate());
+            statement.setInt(2,exchangeRates.getBaseCurrency().getId());
+            statement.setInt(3,exchangeRates.getTargetCurrency().getId());
+
+            statement.executeUpdate();
+
+            exchangeRate.setId(exchangeRates.getId());
+            exchangeRate.setBaseCurrency(exchangeRates.getBaseCurrency());
+            exchangeRate.setTargetCurrency(exchangeRates.getTargetCurrency());
+            exchangeRate.setRate(exchangeRates.getRate());
+
+            return exchangeRate;
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+
+    }
 
     @Override
-    public ExchangeRates save(String name, String code, String sign) throws DatabaseAccessException, RuntimeException {
-        return null;
+    public ExchangeRates save(ExchangeRates exchangeRates) throws DatabaseAccessException, RuntimeException, DuplicateKeyValueExceptions {
+        ExchangeRates exchangeRate = new ExchangeRates();
+
+        try(var connection = ConnectionManager.get();
+            var statement = connection.prepareStatement(SAVE_EXCHANGE_CURRENCY_SQL,Statement.RETURN_GENERATED_KEYS)){
+
+            statement.setInt(1,exchangeRates.getBaseCurrency().getId());
+            statement.setInt(2,exchangeRates.getTargetCurrency().getId());
+            statement.setBigDecimal(3,exchangeRates.getRate());
+
+            statement.executeUpdate();
+
+            exchangeRate.setBaseCurrency(exchangeRates.getBaseCurrency());
+            exchangeRate.setTargetCurrency(exchangeRates.getTargetCurrency());
+            exchangeRate.setRate(exchangeRates.getRate());
+
+            ResultSet keys = statement.getGeneratedKeys();
+            if (keys.next()){
+                exchangeRate.setId(keys.getInt("id"));
+            }
+
+            return exchangeRate;
+        } catch (RuntimeException e) {
+            throw new DatabaseAccessException(e.getMessage());
+        }catch (SQLException e){
+            throw new DuplicateKeyValueExceptions(e.getMessage());
+        }
     }
 
     @Override
@@ -45,7 +104,7 @@ public class ExchangeRatesDao implements Dao<ExchangeRates>{
        ExchangeRates exchangeRates = new ExchangeRates();
 
        try (var connection = ConnectionManager.get();
-            var statement = connection.prepareStatement(FIND_ID_BY_CODE)){
+            var statement = connection.prepareStatement(FIND_ID_BY_CODE_SQL)){
            List<Integer> ids = new ArrayList<>(2);
 
            for (int i = 0; i < codes.length; i++) {
@@ -58,9 +117,11 @@ public class ExchangeRatesDao implements Dao<ExchangeRates>{
 
            }
 
-           var statement2 = connection.prepareStatement(FIND_EXCHANGERATE_BY_PAIR_OF_IDS, Statement.RETURN_GENERATED_KEYS);
+           var statement2 = connection.prepareStatement(FIND_EXCHANGE_CURRENCY_BY_PAIR_OF_IDS_SQL, Statement.RETURN_GENERATED_KEYS);
            statement2.setInt(1,ids.get(0));
            statement2.setInt(2,ids.get(1));
+           ids.clear();
+
 
            ResultSet resultSet =  statement2.executeQuery();
            while (resultSet.next()){

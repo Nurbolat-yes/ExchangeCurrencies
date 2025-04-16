@@ -24,20 +24,20 @@ public class CurrenciesDao implements Dao<Currencies>{
     private final static String FIND_CURRENCY_BY_ID =
             FIND_ALL_SQL + " WHERE id = ?";
 
-    private final static String SAVE_CURRENCY = """
+    private final static String SAVE_CURRENCY_SQL = """
             INSERT INTO currencies(code,fullname,sign) 
             VALUES(?,?,?) 
             """;
 
     @Override
-    public Currencies save(String name,String code, String sign) throws DatabaseAccessException,RuntimeException {
+    public Currencies save(Currencies currencies) throws DatabaseAccessException,RuntimeException {
         Currencies currency = new Currencies();
 
         try (var connection = ConnectionManager.get();
-             var statement = connection.prepareStatement(SAVE_CURRENCY,Statement.RETURN_GENERATED_KEYS)){
-            statement.setString(1,code);
-            statement.setString(2,name);
-            statement.setString(3,sign);
+             var statement = connection.prepareStatement(SAVE_CURRENCY_SQL,Statement.RETURN_GENERATED_KEYS)){
+            statement.setString(1,currencies.getCode());
+            statement.setString(2,currencies.getFullName());
+            statement.setString(3,currencies.getSign());
 
             statement.executeUpdate();
 
@@ -45,9 +45,9 @@ public class CurrenciesDao implements Dao<Currencies>{
             if (keys.next())
                 currency.setId(keys.getInt("id"));
 
-            currency.setCode(code);
-            currency.setFullName(name);
-            currency.setSign(sign);
+            currency.setCode(currencies.getCode());
+            currency.setFullName(currencies.getFullName());
+            currency.setSign(currencies.getSign());
 
             return currency;
 

@@ -8,10 +8,7 @@ public class DatabaseAccessException extends Exception{
         this.message = "Database is not available";
     }
 
-    @Override
-    public String toString() {
-        return "{" +
-               "message='" + message + '\'' +
-               '}';
+    public String getMessage(){
+        return this.message;
     }
 }

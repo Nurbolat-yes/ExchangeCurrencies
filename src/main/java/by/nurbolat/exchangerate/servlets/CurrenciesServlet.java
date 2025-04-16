@@ -48,7 +48,9 @@ public class CurrenciesServlet extends HttpServlet {
         } catch (DatabaseAccessException e) {
             response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
 
-            String result = new Gson().toJson(e.toString());
+            ErrorResponse message = new ErrorResponse(e.getMessage());
+
+            String result = new Gson().toJson(message);
             pw.println(result);
             pw.flush();
             throw new RuntimeException(e);
@@ -66,14 +68,21 @@ public class CurrenciesServlet extends HttpServlet {
         String code = request.getParameter("code");
         String sign = request.getParameter("sign");
 
-        if (name.isEmpty() || code.isEmpty() || sign.isEmpty()){
+        if (name == null || code == null || sign == null){
             response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
             ErrorResponse message = new ErrorResponse("A required form field is missing");
+
+            pw.println(new Gson().toJson(message));
+            pw.flush();
             return;
         }
+        Currencies tempCurrency = new Currencies();
+        tempCurrency.setFullName(name);
+        tempCurrency.setCode(code);
+        tempCurrency.setSign(sign);
 
         try {
-            Currencies currencies = currenciesDao.save(name,code,sign);
+            Currencies currencies = currenciesDao.save(tempCurrency);
 
             if (currencies != null){
                 response.setStatus(HttpServletResponse.SC_CREATED);
@@ -83,10 +92,12 @@ public class CurrenciesServlet extends HttpServlet {
             pw.println(result);
             pw.flush();
 
-        } catch (DatabaseAccessException | RuntimeException e) {
+        } catch (DatabaseAccessException e) {
             response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
 
-            String result = new Gson().toJson(e.toString());
+            ErrorResponse message = new ErrorResponse(e.getMessage());
+
+            String result = new Gson().toJson(message);
             pw.println(result);
             pw.flush();
         }
