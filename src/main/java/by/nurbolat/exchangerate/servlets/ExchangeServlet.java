@@ -14,6 +14,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 
 @WebServlet("/exchange")
 public class ExchangeServlet extends HttpServlet {
@@ -25,13 +26,43 @@ public class ExchangeServlet extends HttpServlet {
         ExchangeRatesDao exchangeRatesDao = ExchangeRatesDao.getInstance();
         PrintWriter pw = response.getWriter();
 
+        String codeCross = "USD";
+
         String codeFrom = request.getParameter("from");
         String codeTo = request.getParameter("to");
+
+        if (codeFrom == null || codeTo == null || request.getParameter("amount") == null || request.getParameter("way") == null){
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            ErrorResponse message = new ErrorResponse("A required form field is missing");
+
+            pw.println(new Gson().toJson(message));
+            pw.flush();
+            return;
+        }
+
+        if (codeFrom.concat(codeTo).length() != 6){
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            ErrorResponse message = new ErrorResponse("wrong format of Code Currency");
+            String result = new Gson().toJson(message.toString());
+            pw.println(result);
+            pw.flush();
+            return;
+        }
+
         int amount = Integer.parseInt(request.getParameter("amount"));
         int wayForExchange = Integer.parseInt(request.getParameter("way"));
 
         try {
+
             ExchangeRates exchangeRates = exchangeRatesDao.findByCode(codeFrom+codeTo);
+            if (exchangeRates.getId() == 0){
+                response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+                ErrorResponse message = new ErrorResponse("Pair of Exchange Currency not found");
+                String result = new Gson().toJson(message);
+                pw.println(result);
+                pw.flush();
+                return;
+            }
 
             if (wayForExchange == 1){
                 String convertInfo = "amount: " + amount +"\n" +"convertedAmount: " + exchangeRates.getRate().multiply(new BigDecimal(amount));
@@ -41,8 +72,35 @@ public class ExchangeServlet extends HttpServlet {
                 pw.println(convertInfo);
                 pw.flush();
             }
+            else if (wayForExchange == 2) {
+                BigDecimal oneDevideByRate = new BigDecimal(1).divide(exchangeRates.getRate(),4, RoundingMode.CEILING);
+                String convertInfo = "amount: " + amount +"\n" +"convertedAmount: " + oneDevideByRate.multiply(new BigDecimal(amount));
 
+                String result = new Gson().toJson(exchangeRates );
+                pw.println(result);
+                pw.println(convertInfo);
+                pw.flush();
+            }
+            else if (wayForExchange == 3) {
+                BigDecimal rate1 = exchangeRatesDao.findByCode(codeFrom+codeCross).getRate();
+                BigDecimal rate2 = exchangeRatesDao.findByCode(codeCross+codeTo).getRate();
 
+                if (rate1 == null || rate2 == null){
+                    response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+                    ErrorResponse message = new ErrorResponse("This operation is not available now");
+                    String result = new Gson().toJson(message);
+                    pw.println(result);
+                    pw.flush();
+                    return;
+                }
+
+                String convertInfo = "amount: " + amount +"\n" +"convertedAmount: " + rate1.multiply(rate2);
+
+                String result = new Gson().toJson(exchangeRates );
+                pw.println(result);
+                pw.println(convertInfo);
+                pw.flush();
+            }
 
         } catch (DatabaseAccessException e) {
             response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
@@ -54,7 +112,6 @@ public class ExchangeServlet extends HttpServlet {
             pw.flush();
             throw new RuntimeException(e);
         }
-
 
     }
 }
