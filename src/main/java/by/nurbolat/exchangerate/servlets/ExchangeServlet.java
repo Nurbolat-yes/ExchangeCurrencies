@@ -55,7 +55,7 @@ public class ExchangeServlet extends HttpServlet {
         try {
 
             ExchangeRates exchangeRates = exchangeRatesDao.findByCode(codeFrom+codeTo);
-            if (exchangeRates.getId() == 0){
+            if (exchangeRates == null){
                 response.setStatus(HttpServletResponse.SC_NOT_FOUND);
                 ErrorResponse message = new ErrorResponse("Pair of Exchange Currency not found");
                 String result = new Gson().toJson(message);
@@ -65,7 +65,7 @@ public class ExchangeServlet extends HttpServlet {
             }
 
             if (wayForExchange == 1){
-                String convertInfo = "amount: " + amount +"\n" +"convertedAmount: " + exchangeRates.getRate().multiply(new BigDecimal(amount));
+                String convertInfo = "amount: " + amount +"\n" +"Total: " + exchangeRates.getRate().multiply(new BigDecimal(amount));
 
                 String result = new Gson().toJson(exchangeRates );
                 pw.println(result);
@@ -74,7 +74,7 @@ public class ExchangeServlet extends HttpServlet {
             }
             else if (wayForExchange == 2) {
                 BigDecimal oneDevideByRate = new BigDecimal(1).divide(exchangeRates.getRate(),4, RoundingMode.CEILING);
-                String convertInfo = "amount: " + amount +"\n" +"convertedAmount: " + oneDevideByRate.multiply(new BigDecimal(amount));
+                String convertInfo = "amount: " + amount +"\n" +"Total: " + oneDevideByRate.multiply(new BigDecimal(amount));
 
                 String result = new Gson().toJson(exchangeRates );
                 pw.println(result);
@@ -87,14 +87,14 @@ public class ExchangeServlet extends HttpServlet {
 
                 if (rate1 == null || rate2 == null){
                     response.setStatus(HttpServletResponse.SC_NOT_FOUND);
-                    ErrorResponse message = new ErrorResponse("This operation is not available now");
+                    ErrorResponse message = new ErrorResponse("This operation is not available for these pair of currencies");
                     String result = new Gson().toJson(message);
                     pw.println(result);
                     pw.flush();
                     return;
                 }
 
-                String convertInfo = "amount: " + amount +"\n" +"convertedAmount: " + rate1.multiply(rate2);
+                String convertInfo = "amount: " + amount +"\n" +"Total: " + rate1.multiply(rate2) + " by : "+codeCross;
 
                 String result = new Gson().toJson(exchangeRates );
                 pw.println(result);

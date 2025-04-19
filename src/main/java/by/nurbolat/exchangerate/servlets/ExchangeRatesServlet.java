@@ -151,6 +151,14 @@ public class ExchangeRatesServlet extends HttpServlet {
             ExchangeRates exchangeRates = exchangeRatesDao.findByCode(pairOfCodes);
             exchangeRates.setRate(rate);
             updatedExchangeRates = exchangeRatesDao.updateRate(exchangeRates);
+            if (updatedExchangeRates == null){
+                response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+                ErrorResponse message = new ErrorResponse("Pair of Exchange Currency not found");
+                String result = new Gson().toJson(message);
+                pw.println(result);
+                pw.flush();
+                return;
+            }
         } catch (DatabaseAccessException e) {
             response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
 
@@ -159,19 +167,9 @@ public class ExchangeRatesServlet extends HttpServlet {
             pw.flush();
         }
 
-        if (updatedExchangeRates.getId() == 0){
-            response.setStatus(HttpServletResponse.SC_NOT_FOUND);
-            ErrorResponse message = new ErrorResponse("Pair of Exchange Currency not found");
-            String result = new Gson().toJson(message);
-            pw.println(result);
-            pw.flush();
-            return;
-        }
-
         String json = new Gson().toJson(updatedExchangeRates);
         pw.println(json);
         pw.flush();
-
-
+        
     }
 }

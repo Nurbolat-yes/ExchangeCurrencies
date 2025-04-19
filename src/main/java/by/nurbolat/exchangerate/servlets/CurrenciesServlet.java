@@ -84,10 +84,10 @@ public class CurrenciesServlet extends HttpServlet {
         try {
             Currencies currencies = currenciesDao.save(tempCurrency);
 
-            if (currencies != null){
-                response.setStatus(HttpServletResponse.SC_CREATED);
-            }
+            if (currencies == null){
 
+            }
+            response.setStatus(HttpServletResponse.SC_CREATED);
             String result = new Gson().toJson(currencies);
             pw.println(result);
             pw.flush();
@@ -99,6 +99,11 @@ public class CurrenciesServlet extends HttpServlet {
 
             String result = new Gson().toJson(message);
             pw.println(result);
+            pw.flush();
+        }catch (RuntimeException e){
+            response.setStatus(HttpServletResponse.SC_CONFLICT);
+            ErrorResponse message = new ErrorResponse("Currency by this code already exist");
+            pw.println(new Gson().toJson(message));
             pw.flush();
         }
 

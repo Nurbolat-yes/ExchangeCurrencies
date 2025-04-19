@@ -39,10 +39,14 @@ public class ExchangeRatesDao implements Dao<ExchangeRates>{
             UPDATE exchangerates SET rate = ? WHERE basecurrencyid = ? AND targetcurrencyid = ?
             """;
 
-    public ExchangeRates updateRate(ExchangeRates exchangeRates) throws DatabaseAccessException {
+    public ExchangeRates updateRate(ExchangeRates exchangeRates) throws DatabaseAccessException{
         ExchangeRates exchangeRate = new ExchangeRates();
         try(var connection = ConnectionManager.get();
             var statement = connection.prepareStatement(UPDATE_EXCHANGE_RATE_SQL)) {
+
+            if (exchangeRates.getBaseCurrency() == null || exchangeRates.getTargetCurrency() == null){
+                return null;
+            }
 
             statement.setBigDecimal(1,exchangeRates.getRate());
             statement.setInt(2,exchangeRates.getBaseCurrency().getId());
@@ -114,7 +118,10 @@ public class ExchangeRatesDao implements Dao<ExchangeRates>{
                while (resultSet.next()){
                    ids.add(resultSet.getInt("id"));
                }
+           }
 
+           if(ids.size() != 2){
+               return null;
            }
 
            var statement2 = connection.prepareStatement(FIND_EXCHANGE_CURRENCY_BY_PAIR_OF_IDS_SQL, Statement.RETURN_GENERATED_KEYS);
