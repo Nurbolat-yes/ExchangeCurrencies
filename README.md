@@ -66,7 +66,7 @@ Maven
 
 2.Import the project as a Maven project in IntelliJ IDEA or Eclipse.
 
-3.Make sure Tomcat and SQLite are installed.
+3.Make sure Tomcat and Postgres are installed.
 
 4.Deploy the generated .war file to Tomcat.
 
